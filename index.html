@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>中医体质自测 · 原型</title>
+<style>
+  :root{
+    --bg:#f6f7f4; --card:#ffffff; --ink:#1f2937; --mut:#6b7280; --line:#e5e7eb;
+    --brand:#1f8a70; --brand2:#0f6e56; --amber:#b4530b;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{margin:0;font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;
+    background:var(--bg);color:var(--ink);line-height:1.6;}
+  .wrap{max-width:680px;margin:0 auto;padding:20px 16px 60px;}
+  header{text-align:center;margin-bottom:18px}
+  header h1{font-size:20px;margin:0 0 4px;font-weight:700}
+  header p{margin:0;color:var(--mut);font-size:13px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;
+    padding:18px;margin-bottom:16px;box-shadow:0 1px 2px rgba(0,0,0,.03)}
+  .disclaimer{font-size:12px;color:var(--mut);background:#fffbeb;border:1px solid #fde68a;
+    border-radius:10px;padding:10px 12px;margin-bottom:16px}
+  .q{margin-bottom:14px;padding-bottom:14px;border-bottom:1px dashed var(--line)}
+  .q:last-child{border-bottom:none}
+  .q .num{font-size:12px;color:var(--mut);margin-bottom:4px}
+  .q .txt{font-size:15px;margin-bottom:8px;font-weight:500}
+  .opts{display:flex;gap:6px;flex-wrap:wrap}
+  .opt{flex:1;min-width:54px;text-align:center;padding:8px 4px;border:1px solid var(--line);
+    border-radius:9px;font-size:13px;cursor:pointer;background:#fff;user-select:none;transition:.15s}
+  .opt:hover{border-color:var(--brand)}
+  .opt.on{background:var(--brand);color:#fff;border-color:var(--brand)}
+  .sticky{position:sticky;top:0;background:rgba(246,247,244,.95);backdrop-filter:blur(6px);
+    padding:10px 0;z-index:5;display:flex;align-items:center;gap:12px}
+  .bar{flex:1;height:6px;background:#e5e7eb;border-radius:99px;overflow:hidden}
+  .bar>i{display:block;height:100%;width:0;background:var(--brand);transition:width .3s}
+  .btn{display:block;width:100%;padding:13px;border:none;border-radius:11px;background:var(--brand);
+    color:#fff;font-size:15px;font-weight:600;cursor:pointer;margin-top:6px}
+  .btn:disabled{background:#9ca3af;cursor:not-allowed}
+  .btn.ghost{background:#fff;color:var(--brand);border:1px solid var(--brand)}
+  .hide{display:none}
+  .res-name{font-size:26px;font-weight:700;text-align:center;color:var(--brand2)}
+  .res-tag{text-align:center;color:var(--mut);font-size:13px;margin:4px 0 14px}
+  .tags{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin:10px 0}
+  .tag{font-size:12px;padding:4px 10px;border-radius:99px;background:#ecfdf5;color:var(--brand2);border:1px solid #a7f3d0}
+  .tag.ten{background:#fff7ed;color:var(--amber);border-color:#fed7aa}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:6px 0 2px}
+  .meter{display:flex;align-items:center;gap:8px;font-size:12px;margin:5px 0}
+  .meter .lab{width:54px;color:var(--mut);flex:none}
+  .meter .track{flex:1;height:7px;background:#eef2f0;border-radius:99px;overflow:hidden}
+  .meter .track>i{display:block;height:100%;background:var(--brand)}
+  .meter .val{width:30px;text-align:right;color:var(--mut);flex:none}
+  .sec h3{font-size:14px;margin:14px 0 6px;color:var(--brand2)}
+  .sec ul{margin:0;padding-left:18px;font-size:13px;color:#374151}
+  .sec li{margin:3px 0}
+  .pill{display:inline-block;font-size:12px;padding:2px 8px;border-radius:6px;background:#f0fdf4;color:#166534;margin:2px 4px 2px 0}
+  canvas{display:none}
+  footer{text-align:center;color:var(--mut);font-size:11px;margin-top:20px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>中医体质自测</h1>
+    <p>基于《中医体质分类与判定》国家标准量表 · 原型</p>
+    <p style="margin:8px 0 0"><a href="constitutions/index.html" style="color:var(--brand2);font-weight:600;text-decoration:none">📚 查看九种体质详解 →</a></p>
+  </header>
+
+  <div class="disclaimer">
+    ⚠️ 本测试为健康自评参考工具，结果<strong>不构成医疗诊断</strong>。体质调理请咨询专业中医师。
+  </div>
+
+  <!-- 测试页 -->
+  <div id="quiz">
+    <div class="card" id="form"></div>
+    <div class="sticky">
+      <span id="cnt" style="font-size:13px;color:var(--mut)">已答 0 / 0</span>
+      <div class="bar"><i id="prog"></i></div>
+      <button class="btn ghost" id="submit" style="width:auto;margin:0;padding:10px 18px" disabled>看结果</button>
+    </div>
+  </div>
+
+  <!-- 结果页 -->
+  <div id="result" class="hide">
+    <div class="card">
+      <div class="res-name" id="rName"></div>
+      <div class="res-tag" id="rTag"></div>
+      <div class="tags" id="rTags"></div>
+      <h3 style="font-size:14px;margin:6px 0 4px;color:var(--brand2)">九种体质得分</h3>
+      <div id="rMeters"></div>
+    </div>
+
+    <div class="card sec" id="rAdvice"></div>
+
+    <button class="btn" id="shareImg">保存报告图</button>
+    <button class="btn ghost" id="shareText" style="margin-top:8px">复制分享文案</button>
+    <button class="btn ghost" id="restart" style="margin-top:8px">重新测试</button>
+  </div>
+
+  <footer>本原型仅用于产品验证与学习，请勿替代专业医疗建议。</footer>
+</div>
+<canvas id="cv" width="600" height="820"></canvas>
+
+<script>
+/* ---------- 体质定义 ---------- */
+const C = {
+  pinghe:{name:'平和质', tag:'理想体质，气血调和', color:'#0f6e56',
+    diet:['饮食有节、不偏食，多吃五谷杂粮与蔬果','规律三餐，七八分饱'],
+    acu:['日常可常按足三里保健','无需特别调理，顺其自然'],
+    life:['劳逸结合，坚持适度锻炼','作息规律，心态平和']},
+  qixu:{name:'气虚质', tag:'气息不足，容易疲乏', color:'#2563eb',
+    diet:['宜食益气健脾：小米、山药、牛肉、大枣、黄芪','忌过度食用萝卜、陈皮等破气之物'],
+    acu:['按揉足三里（健脾和胃）','常拍打下肢胃经补气'],
+    life:['避免过度劳累，运动循序渐进','保证睡眠，少熬夜']},
+  yangxu:{name:'阳虚质', tag:'畏寒怕冷，手足不温', color:'#7c3aed',
+    diet:['宜温补：羊肉、韭菜、核桃、生姜红糖水','忌冰饮、梨、西瓜、苦瓜等生冷'],
+    acu:['艾灸足三里、关元穴','生姜花椒水泡脚'],
+    life:['注意保暖，少吹空调冷风','多晒太阳，适度有氧']},
+  yinxu:{name:'阴虚质', tag:'津液不足，虚热内生', color:'#db2777',
+    diet:['宜甘凉滋润：鸭肉、银耳、百合、梨、绿豆','忌羊肉、辣椒、姜蒜、荔枝等温燥'],
+    acu:['按揉三阴交','晨起吞津（舌抵上腭生津咽下）'],
+    life:['少熬夜，避免燥热环境','保持情绪平稳']},
+  tanshi:{name:'痰湿质', tag:'形体肥胖，痰多身重', color:'#0891b2',
+    diet:['宜清淡：冬瓜、萝卜、海带、薏米、赤豆','忌肥甘黏腻、少饮酒'],
+    acu:['按揉丰隆穴（化痰要穴）','拍打胃经祛湿'],
+    life:['多动出汗，控制体重','居室通风防潮']},
+  shire:{name:'湿热质', tag:'面油口苦，大便黏滞', color:'#ca8a04',
+    diet:['宜清淡甘平：绿豆、芹菜、黄瓜、藕、冬瓜','忌辛辣酒类、牛羊肉等温补'],
+    acu:['按揉中脘、足三里、阴陵泉','保持皮肤清爽'],
+    life:['避暑湿，勤换衣物','规律排便']},
+  xueyu:{name:'血瘀质', tag:'肤色晦黯，易生瘀斑', color:'#dc2626',
+    diet:['宜活血：山楂、红糖、桃仁、红酒（适量）','少食寒凉'],
+    acu:['按揉太冲、三阴交、曲池','适度舒展筋骨'],
+    life:['坚持运动以促进循环','保持心情舒畅，少生闷气']},
+  qiyu:{name:'气郁质', tag:'情绪低落，胸胁胀闷', color:'#16a34a',
+    diet:['宜行气解郁：玫瑰花、陈皮、金橘、荞麦、海带','忌油腻黏滞'],
+    acu:['按揉太冲穴','常拍打下肢肝经疏肝'],
+    life:['多社交、多运动疏解情绪','培养兴趣爱好，少独处郁结']},
+  tebing:{name:'特禀质', tag:'过敏体质，易感外邪', color:'#ea580c',
+    diet:['饮食均衡清淡，荤素合理','忌海鲜、辛辣等发物'],
+    acu:['过敏性鼻炎可按迎香、鼻通穴','增强体质为主'],
+    life:['明确并避开过敏原','适度锻炼，逐步改善体质']}
+};
+const ORDER=['pinghe','qixu','yangxu','yinxu','tanshi','shire','xueyu','qiyu','tebing'];
+
+/* ---------- 题目（国家标准量表，62题）---------- */
+const Q=[
+ {c:'pinghe',r:false,t:'您精力充沛吗？'},
+ {c:'pinghe',r:true, t:'您容易疲乏吗？'},
+ {c:'pinghe',r:true, t:'您说话时感觉气力不足、声音低弱无力吗？'},
+ {c:'pinghe',r:true, t:'您容易感到闷闷不乐、情绪低沉吗？'},
+ {c:'pinghe',r:true, t:'您比一般人更耐受不了寒冷（冬天冷、夏天冷空调）吗？'},
+ {c:'pinghe',r:false,t:'您能适应外界自然和社会环境的变化吗？'},
+ {c:'pinghe',r:true, t:'您容易失眠吗？'},
+ {c:'pinghe',r:true, t:'您容易忘事（健忘）吗？'},
+
+ {c:'qixu',r:false,t:'您容易疲乏吗？'},
+ {c:'qixu',r:false,t:'您容易气短（呼吸短促、接不上气）吗？'},
+ {c:'qixu',r:false,t:'您容易心慌吗？'},
+ {c:'qixu',r:false,t:'您容易头晕或站起时晕眩吗？'},
+ {c:'qixu',r:false,t:'您比别人更容易患感冒吗？'},
+ {c:'qixu',r:false,t:'您喜欢安静、懒得说话吗？'},
+ {c:'qixu',r:false,t:'您说话声音低弱无力吗？'},
+ {c:'qixu',r:false,t:'您活动量稍大就容易出虚汗吗？'},
+
+ {c:'yangxu',r:false,t:'您手脚发凉吗？'},
+ {c:'yangxu',r:false,t:'您胃脘部、背部或腰膝部怕冷吗？'},
+ {c:'yangxu',r:false,t:'您感到怕冷、衣服比别人穿得多吗？'},
+ {c:'yangxu',r:false,t:'您比一般人更耐受不了寒冷吗？'},
+ {c:'yangxu',r:false,t:'您比别人更容易患感冒吗？'},
+ {c:'yangxu',r:false,t:'您吃（喝）凉的东西会感到不舒服或怕吃凉东西吗？'},
+ {c:'yangxu',r:false,t:'您受凉或吃（喝）凉的东西后容易腹泻吗？'},
+
+ {c:'yinxu',r:false,t:'您感到手脚心发热吗？'},
+ {c:'yinxu',r:false,t:'您感觉身体、脸上发热吗？'},
+ {c:'yinxu',r:false,t:'您皮肤或口唇干燥吗？'},
+ {c:'yinxu',r:false,t:'您口唇的颜色比一般人红吗？'},
+ {c:'yinxu',r:false,t:'您容易便秘或大便干燥吗？'},
+ {c:'yinxu',r:false,t:'您面部两颧潮红或偏红吗？'},
+ {c:'yinxu',r:false,t:'您感到眼睛干涩吗？'},
+
+ {c:'tanshi',r:false,t:'您感到胸闷或腹部胀满吗？'},
+ {c:'tanshi',r:false,t:'您感到身体沉重不轻松、不爽快吗？'},
+ {c:'tanshi',r:false,t:'您腹部肥满松软吗？'},
+ {c:'tanshi',r:false,t:'您额部油脂分泌多吗？'},
+ {c:'tanshi',r:false,t:'您上眼睑比别人肿（轻微隆起）吗？'},
+ {c:'tanshi',r:false,t:'您嘴里有黏黏的感觉吗？'},
+ {c:'tanshi',r:false,t:'您平时痰多、咽喉部总感到有痰堵着吗？'},
+
+ {c:'shire',r:false,t:'您面部或鼻部有油腻感或油亮发光吗？'},
+ {c:'shire',r:false,t:'您容易生痤疮或疮疖吗？'},
+ {c:'shire',r:false,t:'您感到口苦或嘴里有异味吗？'},
+ {c:'shire',r:false,t:'您大便黏滞不爽、有解不尽的感觉吗？'},
+ {c:'shire',r:false,t:'您小便时尿道有发热感、尿色深吗？'},
+ {c:'shire',r:false,t:'您带下色黄（女）或阴囊潮湿（男）吗？'},
+
+ {c:'xueyu',r:false,t:'您的皮肤不知不觉出现青紫瘀斑（皮下出血）吗？'},
+ {c:'xueyu',r:false,t:'您两颧部有细微红丝吗？'},
+ {c:'xueyu',r:false,t:'您身体上有哪里疼痛吗？'},
+ {c:'xueyu',r:false,t:'您面色晦黯或容易出现褐斑吗？'},
+ {c:'xueyu',r:false,t:'您容易有黑眼圈吗？'},
+ {c:'xueyu',r:false,t:'您容易忘事（健忘）吗？'},
+
+ {c:'qiyu',r:false,t:'您感到闷闷不乐、情绪低沉吗？'},
+ {c:'qiyu',r:false,t:'您容易精神紧张、焦虑不安吗？'},
+ {c:'qiyu',r:false,t:'您多愁善感、感情脆弱吗？'},
+ {c:'qiyu',r:false,t:'您容易感到害怕或受到惊吓吗？'},
+ {c:'qiyu',r:false,t:'您胁肋部或乳房胀痛吗？'},
+ {c:'qiyu',r:false,t:'您无缘无故叹气吗？'},
+
+ {c:'tebing',r:false,t:'您没有感冒时也会打喷嚏吗？'},
+ {c:'tebing',r:false,t:'您没有感冒时也会鼻塞、流鼻涕吗？'},
+ {c:'tebing',r:false,t:'您因季节、温度、异味变化而咳喘吗？'},
+ {c:'tebing',r:false,t:'您容易过敏（药物、食物、气味、花粉等）吗？'},
+ {c:'tebing',r:false,t:'您的皮肤容易起荨麻疹（风团）吗？'},
+ {c:'tebing',r:false,t:'您因过敏出现过紫癜（皮下出血）吗？'},
+ {c:'tebing',r:false,t:'您的皮肤一抓就红、出现抓痕吗？'}
+];
+
+/* ---------- 渲染题目（随机顺序避免暗示）---------- */
+const opts=['没有','很少','有时','经常','总是'];
+let qOrder=[...Array(Q.length).keys()];
+qOrder.sort(()=>Math.random()-0.5);
+const answers=new Array(Q.length).fill(0);
+const form=document.getElementById('form');
+qOrder.forEach((qi,idx)=>{
+  const q=Q[qi];
+  const d=document.createElement('div');d.className='q';
+  d.innerHTML=`<div class="num">第 ${idx+1} 题</div><div class="txt">${q.t}</div>`;
+  const o=document.createElement('div');o.className='opts';
+  opts.forEach((lab,v)=>{
+    const b=document.createElement('div');b.className='opt';b.textContent=lab;
+    b.onclick=()=>{
+      o.querySelectorAll('.opt').forEach(x=>x.classList.remove('on'));
+      b.classList.add('on');answers[qi]=v+1;update();
+    };
+    o.appendChild(b);
+  });
+  d.appendChild(o);form.appendChild(d);
+});
+document.getElementById('cnt').textContent=`已答 0 / ${Q.length}`;
+function update(){
+  const done=answers.filter(a=>a>0).length;
+  document.getElementById('cnt').textContent=`已答 ${done} / ${Q.length}`;
+  document.getElementById('prog').style.width=(done/Q.length*100)+'%';
+  document.getElementById('submit').disabled=done<Q.length;
+}
+
+/* ---------- 计分 + 判定 ---------- */
+function calc(){
+  const raw={},cnt={};
+  ORDER.forEach(c=>{raw[c]=0;cnt[c]=0});
+  Q.forEach((q,i)=>{ if(answers[i]>0){ const v=q.r?6-answers[i]:answers[i]; raw[q.c]+=v; cnt[q.c]++; }});
+  const score={};
+  ORDER.forEach(c=>{ score[c]=Math.round(((raw[c]-cnt[c])/(cnt[c]*4))*100); });
+  return score;
+}
+function determine(s){
+  const ph=s.pinghe;
+  const bias=ORDER.filter(c=>c!=='pinghe');
+  const bs=bias.map(c=>({c,v:s[c]})).sort((a,b)=>b.v-a.v);
+  const over=bs.filter(x=>x.v>=40);
+  const ten=bs.filter(x=>x.v>=30&&x.v<40);
+  let main, jian=[], tendency=ten.map(x=>x.c), isTen=false;
+  if(ph>=60 && over.length===0){ main='pinghe'; }
+  else if(ph>=60 && over.length>0){ main=over[0].c; jian=over.slice(1).map(x=>x.c); }
+  else if(over.length>0){ main=over[0].c; jian=over.slice(1).map(x=>x.c); }
+  else if(ten.length>0){ main=ten[0].c; tendency=ten.slice(1).map(x=>x.c); isTen=true; }
+  else { main='pinghe'; }
+  return {main,jian,tendency,isTen,ph,over:over.map(x=>x.c)};
+}
+function showResult(){
+  const s=calc();const d=determine(s);
+  document.getElementById('quiz').classList.add('hide');
+  document.getElementById('result').classList.remove('hide');
+  const mainC=C[d.main];
+  let title=mainC.name, tag=mainC.tag;
+  if(d.main==='pinghe'){ title='平和质'; tag='理想体质 · 气血调和，继续保持'; }
+  if(d.isTen){ title=mainC.name+'（倾向）'; }
+  document.getElementById('rName').textContent=title;
+  document.getElementById('rName').style.color=mainC.color;
+  document.getElementById('rTag').textContent=tag;
+  const tags=document.getElementById('rTags');tags.innerHTML='';
+  if(d.jian.length){ d.jian.forEach(c=>{const e=document.createElement('span');e.className='tag';e.textContent='兼夹 '+C[c].name;tags.appendChild(e);}); }
+  d.tendency.forEach(c=>{const e=document.createElement('span');e.className='tag ten';e.textContent=C[c].name+'倾向';tags.appendChild(e);});
+
+  const m=document.getElementById('rMeters');m.innerHTML='';
+  ORDER.forEach(c=>{
+    const row=document.createElement('div');row.className='meter';
+    row.innerHTML=`<span class="lab">${C[c].name}</span><span class="track"><i style="width:${s[c]}%;background:${C[c].color}"></i></span><span class="val">${s[c]}</span>`;
+    m.appendChild(row);
+  });
+
+  const adv=document.getElementById('rAdvice');
+  let html=`<h3 style="margin-top:0">调养建议 · ${mainC.name}</h3>
+    <div><span class="pill">饮食</span></div><ul>${mainC.diet.map(x=>`<li>${x}</li>`).join('')}</ul>
+    <div><span class="pill">穴位</span></div><ul>${mainC.acu.map(x=>`<li>${x}</li>`).join('')}</ul>
+    <div><span class="pill">起居</span></div><ul>${mainC.life.map(x=>`<li>${x}</li>`).join('')}</ul>`;
+  if(d.jian.length){
+    d.jian.forEach(c=>{ const x=C[c];
+      html+=`<h3>兼夹 ${x.name}</h3><ul>${x.diet.concat(x.life).map(t=>`<li>${t}</li>`).join('')}</ul>`;});
+  }
+  adv.innerHTML=html;
+  window.__last={title,tag,s,d};
+}
+
+document.getElementById('submit').onclick=showResult;
+document.getElementById('restart').onclick=()=>location.reload();
+document.getElementById('shareText').onclick=()=>{
+  const {title,tag,s,d}=window.__last;
+  const txt=`我测出是「${title}」——${tag}。\n九种体质得分：\n`+
+    ORDER.map(c=>`${C[c].name} ${s[c]}`).join('  ')+
+    `\n来测测你是什么体质 👉`;
+  navigator.clipboard.writeText(txt).then(()=>alert('分享文案已复制'));
+};
+document.getElementById('shareImg').onclick=()=>{
+  const {title,tag,s,d}=window.__last;
+  const cv=document.getElementById('cv'),x=cv.getContext('2d');
+  x.fillStyle='#0f6e56';x.fillRect(0,0,600,820);
+  x.fillStyle='#ffffff';x.fillRect(20,20,560,780);
+  x.fillStyle='#0f6e56';x.font='bold 22px sans-serif';x.textAlign='center';
+  x.fillText('中医体质自测报告',300,70);
+  x.fillStyle=window.__last?s?C[d.main].color:'#0f6e56':'#0f6e56';
+  x.fillStyle=C[d.main].color;x.font='bold 40px sans-serif';
+  x.fillText(title,300,150);
+  x.fillStyle='#6b7280';x.font='15px sans-serif';x.fillText(tag,300,184);
+  x.fillStyle='#1f2937';x.font='14px sans-serif';x.textAlign='left';
+  let y=240;
+  ORDER.forEach(c=>{
+    x.fillStyle='#6b7280';x.fillText(C[c].name,40,y);
+    x.fillStyle='#eef2f0';x.fillRect(120,y-12,420,14);
+    x.fillStyle=C[c].color;x.fillRect(120,y-12,420*(s[c]/100),14);
+    x.fillStyle='#6b7280';x.fillText(s[c],552,y);
+    y+=34;
+  });
+  x.fillStyle='#9ca3af';x.font='12px sans-serif';x.textAlign='center';
+  x.fillText('本结果仅供参考，不构成医疗诊断 · 体质调理请咨询专业中医师',300,800);
+  const a=document.createElement('a');
+  a.download='体质自测报告.png';a.href=cv.toDataURL('image/png');a.click();
+};
+</script>
+</body>
+</html>
